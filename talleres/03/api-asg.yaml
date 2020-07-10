@@ -16,37 +16,37 @@ Resources:
     Properties:
       GroupName: MythicalMysfitsLB
       GroupDescription: Load Balancer
-      # Ingress rules
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
   InstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: MythicalMysfitsInstance
       GroupDescription: Instances
-      # Ingress rules
       SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 8000
-        ToPort: 8000
-        SourceSecurityGroupId: !Ref LoadBalancerSG
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          ToPort: 22
+          IpProtocol: tcp
+        - SourceSecurityGroupId: !GetAtt LoadBalancerSG.GroupId
+          FromPort: 8000
+          ToPort: 8000
+          IpProtocol: tcp
   LoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
       Scheme: internet-facing
       SecurityGroups:
-      - !GetAtt LoadBalancerSG.GroupId
+        - !GetAtt LoadBalancerSG.GroupId
       AvailabilityZones: !GetAZs
-      # Listeners
       Listeners:
       - InstancePort: 8000
         InstanceProtocol: TCP
         LoadBalancerPort: 80
         Protocol: TCP
-      # HealthCheck
       HealthCheck:
         HealthyThreshold: 2
         Interval: 30
@@ -64,29 +64,30 @@ Resources:
       KeyName: mythical-mysfits
       SecurityGroups:
         - !GetAtt InstanceSG.GroupId
-      UserData:
+      UserData: 
         Fn::Base64: |
           #!/bin/bash -xe
           exec > >(tee /var/log/cloud-init-output.log|logger -t user-data -s 2>/dev/console) 2>&1
-          yum install -y python37 git
+          cd /home/ec2-user
+          sudo yum install -y python37
           curl -O https://bootstrap.pypa.io/get-pip.py
           python3 get-pip.py
-          cd ~
-          git clone https://github.com/eloyvega/bootcamp-module-devops.git
-          cd ~/bootcamp-module-devops/backend/
+          sudo yum install git -y
+          git clone https://github.com/enriquepalaciosv/bootcamp-module-devops.git	
+          cd bootcamp-module-devops/backend/
           pip install -r requirements.txt
           nohup gunicorn -w 3 -b 0.0.0.0:8000 app:app &
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-    Properties: 
-      AutoScalingGroupName: !GetAZs
+    Properties:
+      AvailabilityZones: !GetAZs
       DesiredCapacity: 1
       LaunchConfigurationName: !Ref LaunchConfiguration
-      LoadBalancerNames: 
+      LoadBalancerNames:
         - !Ref LoadBalancer
       MaxSize: 2
       MinSize: 1
-      Tags: 
+      Tags:
         - Key: Name
-          PropagatedAtLaunch: True
-          Value: taller3
+          PropagateAtLaunch: True
+          Value: Mysfits
