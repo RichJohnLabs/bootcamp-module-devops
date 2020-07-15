@@ -4,7 +4,7 @@ from flask_cors import CORS
 # A very basic API created using Flask that has two possible routes for requests.
 
 app = Flask(__name__)
-CORS(app)
+CORS(app
 
 # The service basepath has a short response just to ensure that healthchecks
 # sent to the service root will receive a healthy response.
